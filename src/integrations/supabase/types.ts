@@ -14,7 +14,140 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      email_actions: {
+        Row: {
+          created_at: string
+          description: string | null
+          done: boolean
+          due_at: string | null
+          email_id: string
+          id: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          done?: boolean
+          due_at?: string | null
+          email_id: string
+          id?: string
+          type: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          done?: boolean
+          due_at?: string | null
+          email_id?: string
+          id?: string
+          type?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_actions_email_id_fkey"
+            columns: ["email_id"]
+            isOneToOne: false
+            referencedRelation: "emails"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      emails: {
+        Row: {
+          body: string
+          created_at: string
+          from_addr: string
+          from_name: string | null
+          id: string
+          intent: string | null
+          key_details: Json | null
+          message_id: string | null
+          next_action: string | null
+          processed_at: string | null
+          received_at: string
+          reminder_at: string | null
+          replied_at: string | null
+          status: string
+          subject: string
+          suggested_reply: string | null
+          summary: string | null
+          thread_id: string | null
+          updated_at: string
+          urgency: string | null
+          user_id: string
+        }
+        Insert: {
+          body: string
+          created_at?: string
+          from_addr: string
+          from_name?: string | null
+          id?: string
+          intent?: string | null
+          key_details?: Json | null
+          message_id?: string | null
+          next_action?: string | null
+          processed_at?: string | null
+          received_at?: string
+          reminder_at?: string | null
+          replied_at?: string | null
+          status?: string
+          subject: string
+          suggested_reply?: string | null
+          summary?: string | null
+          thread_id?: string | null
+          updated_at?: string
+          urgency?: string | null
+          user_id: string
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          from_addr?: string
+          from_name?: string | null
+          id?: string
+          intent?: string | null
+          key_details?: Json | null
+          message_id?: string | null
+          next_action?: string | null
+          processed_at?: string | null
+          received_at?: string
+          reminder_at?: string | null
+          replied_at?: string | null
+          status?: string
+          subject?: string
+          suggested_reply?: string | null
+          summary?: string | null
+          thread_id?: string | null
+          updated_at?: string
+          urgency?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          display_name: string | null
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          display_name?: string | null
+          id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          display_name?: string | null
+          id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
