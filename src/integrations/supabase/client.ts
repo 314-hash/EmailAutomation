@@ -73,14 +73,16 @@ function createSupabaseClient() {
     throw new Error(message);
   }
 
+  const isServer = typeof window === 'undefined';
+
   return createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
     global: {
       fetch: createSupabaseFetch(SUPABASE_PUBLISHABLE_KEY),
     },
     auth: {
       storage: getSafeStorage(),
-      persistSession: true,
-      autoRefreshToken: true,
+      persistSession: !isServer,
+      autoRefreshToken: !isServer,
     }
   });
 }
