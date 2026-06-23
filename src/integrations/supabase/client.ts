@@ -27,6 +27,22 @@ function createSupabaseFetch(supabaseKey: string): typeof fetch {
 }
 
 
+class InMemoryStorage {
+  private store: Record<string, string> = {};
+
+  getItem(key: string): string | null {
+    return this.store[key] || null;
+  }
+
+  setItem(key: string, value: string): void {
+    this.store[key] = value;
+  }
+
+  removeItem(key: string): void {
+    delete this.store[key];
+  }
+}
+
 function getSafeStorage() {
   if (typeof window === 'undefined') return undefined;
   try {
@@ -37,7 +53,7 @@ function getSafeStorage() {
     return storage;
   } catch (e) {
     console.warn('[Supabase] localStorage is not accessible. Using in-memory fallback.');
-    return undefined;
+    return new InMemoryStorage();
   }
 }
 
