@@ -71,8 +71,8 @@ export const processEmail = createServerFn({ method: "POST" })
     }).parse(d),
   )
   .handler(async ({ context, data }) => {
-    const apiKey = process.env.LOVABLE_API_KEY;
-    if (!apiKey) throw new Error("LOVABLE_API_KEY missing");
+    const hasApiKey = process.env.GEMINI_API_KEY || process.env.OPENAI_API_KEY || process.env.LOVABLE_API_KEY;
+    if (!hasApiKey) throw new Error("Missing AI API key. Please configure GEMINI_API_KEY, OPENAI_API_KEY, or LOVABLE_API_KEY in your environment.");
 
     const { data: email, error } = await context.supabase
       .from("emails")
@@ -85,8 +85,8 @@ export const processEmail = createServerFn({ method: "POST" })
     const tone = data.tone ?? "formal";
     const userPrompt = data.prompt?.trim();
     const { generateText } = await import("ai");
-    const { createLovableAiGatewayProvider } = await import("./ai-gateway.server");
-    const gateway = createLovableAiGatewayProvider(apiKey);
+    const { getAiModel } = await import("./ai-gateway.server");
+    const model = getAiModel();
 
     const system = `You are an AI email assistant for a supply chain and operations team. Analyze the email and return ONLY a JSON object with this exact shape:
 {
@@ -110,7 +110,7 @@ Received: ${email.received_at}
 ${email.body}`;
 
     const { text } = await generateText({
-      model: gateway("google/gemini-3-flash-preview"),
+      model,
       system,
       prompt,
     });

@@ -51,10 +51,6 @@ function AppLayout() {
           })}
         </nav>
         <div className="border-t border-sidebar-border px-2 py-3">
-          <div className="mb-2 flex items-center gap-2 px-2.5 text-xs text-muted-foreground">
-            <Sparkles className="h-3 w-3 text-primary" />
-            Powered by Lovable AI
-          </div>
           <button
             onClick={signOut}
             className="flex w-full items-center gap-2.5 rounded-md px-2.5 py-1.5 text-sm text-sidebar-foreground/70 hover:bg-sidebar-accent/60 hover:text-sidebar-foreground"

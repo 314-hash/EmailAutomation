@@ -3,8 +3,9 @@ import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { getEmail, processEmail, markReplied, archiveEmail } from "@/lib/emails.functions";
-import { ArrowLeft, Loader2, Sparkles, Send, Archive, CheckCircle2, Check, Trash2, RefreshCw, SlidersHorizontal, Wand2 } from "lucide-react";
+import { ArrowLeft, Loader2, Sparkles, Send, Archive, CheckCircle2, Check, Trash2, RefreshCw, SlidersHorizontal, Wand2, Download } from "lucide-react";
 import { toast } from "sonner";
+import { jsPDF } from "jspdf";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -95,6 +96,133 @@ function EmailDetail() {
     },
   });
 
+  const downloadPdfReport = () => {
+    if (!e) return;
+    try {
+      const doc = new jsPDF();
+      let y = 20;
+
+      // Title
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(18);
+      doc.setTextColor(106, 45, 222); // Theme primary color
+      doc.text("TRIAGE ANALYSIS REPORT", 20, y);
+      y += 10;
+
+      // Meta info
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(9);
+      doc.setTextColor(120, 120, 120);
+      doc.text(`Generated: ${new Date().toLocaleString()}`, 20, y);
+      y += 15;
+
+      // Divider line
+      doc.setDrawColor(220, 220, 220);
+      doc.line(20, y, 190, y);
+      y += 10;
+
+      // Section: Document/Email Source
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(12);
+      doc.setTextColor(30, 30, 30);
+      doc.text("Document Details", 20, y);
+      y += 8;
+
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(10);
+      doc.setTextColor(80, 80, 80);
+
+      // Helper for word wrapping
+      const printLabelValue = (label: string, value: string) => {
+        doc.setFont("helvetica", "bold");
+        doc.text(`${label}: `, 20, y);
+        doc.setFont("helvetica", "normal");
+        const lines = doc.splitTextToSize(value || "N/A", 130);
+        doc.text(lines, 55, y);
+        y += Math.max(6, lines.length * 5);
+      };
+
+      printLabelValue("Subject", e.subject);
+      printLabelValue("From", `${e.from_name ?? ""} <${e.from_addr}>`);
+      printLabelValue("Received At", new Date(e.received_at).toLocaleString());
+      y += 5;
+
+      // Section: AI Assessment
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(12);
+      doc.setTextColor(30, 30, 30);
+      doc.text("AI Assessment", 20, y);
+      y += 8;
+
+      printLabelValue("Urgency", e.urgency?.toUpperCase() ?? "N/A");
+      printLabelValue("Intent", e.intent ?? "N/A");
+      
+      doc.setFont("helvetica", "bold");
+      doc.text("Summary:", 20, y);
+      y += 6;
+      doc.setFont("helvetica", "normal");
+      const summaryLines = doc.splitTextToSize(e.summary || "No summary available.", 160);
+      doc.text(summaryLines, 20, y);
+      y += summaryLines.length * 5.5 + 5;
+
+      // Section: Key Details
+      if (e.key_details && Object.keys(e.key_details).length > 0) {
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(12);
+        doc.setTextColor(30, 30, 30);
+        doc.text("Extracted Invoice/Key Details", 20, y);
+        y += 8;
+
+        Object.entries(e.key_details).forEach(([k, v]) => {
+          if (y > 270) {
+            doc.addPage();
+            y = 20;
+          }
+          printLabelValue(k, v);
+        });
+        y += 5;
+      }
+
+      // Section: Next Action & Reply
+      if (y > 250) {
+        doc.addPage();
+        y = 20;
+      }
+
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(12);
+      doc.setTextColor(30, 30, 30);
+      doc.text("Next Steps & Actions", 20, y);
+      y += 8;
+
+      printLabelValue("Recommended Action", e.next_action ?? "N/A");
+      
+      doc.setFont("helvetica", "bold");
+      doc.text("Suggested Response:", 20, y);
+      y += 6;
+      doc.setFont("helvetica", "normal");
+      const replyLines = doc.splitTextToSize(e.suggested_reply || "No reply drafted.", 160);
+      doc.text(replyLines, 20, y);
+      y += replyLines.length * 5.5 + 10;
+
+      // Footer
+      if (y > 275) {
+        doc.addPage();
+        y = 20;
+      }
+      doc.setFont("helvetica", "italic");
+      doc.setFontSize(8);
+      doc.setTextColor(150, 150, 150);
+      doc.text("This report was compiled automatically using operations artificial intelligence.", 20, y);
+
+      doc.save(`invoice_report_${e.id.slice(0, 8)}.pdf`);
+      toast.success("Invoice report downloaded successfully!");
+    } catch (err: any) {
+      toast.error(`Failed to generate PDF: ${err.message}`);
+      console.error(err);
+    }
+  };
+
   if (q.isLoading) {
     return (
       <div className="flex h-screen items-center justify-center text-sm text-muted-foreground">
@@ -116,9 +244,17 @@ function EmailDetail() {
           <ArrowLeft className="h-3 w-3" /> Inbox
         </Link>
         <div className="flex items-center gap-2">
+          {e.summary && (
+            <button
+              onClick={downloadPdfReport}
+              className="inline-flex items-center gap-1.5 rounded-md border border-border bg-card px-3 py-1.5 text-xs hover:bg-accent transition-colors"
+            >
+              <Download className="h-3.5 w-3.5" /> Download Invoice PDF
+            </button>
+          )}
           <button
             onClick={() => archiveMut.mutate()}
-            className="inline-flex items-center gap-1.5 rounded-md border border-border bg-card px-3 py-1.5 text-xs hover:bg-accent"
+            className="inline-flex items-center gap-1.5 rounded-md border border-border bg-card px-3 py-1.5 text-xs hover:bg-accent transition-colors"
           >
             <Archive className="h-3.5 w-3.5" /> Archive
           </button>

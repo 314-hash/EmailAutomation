@@ -10,7 +10,6 @@ import {
 import { useEffect, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
-import { reportLovableError } from "../lib/lovable-error-reporting";
 import { Toaster } from "sonner";
 
 function NotFoundComponent() {
@@ -38,9 +37,6 @@ function NotFoundComponent() {
 function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
   console.error(error);
   const router = useRouter();
-  useEffect(() => {
-    reportLovableError(error, { boundary: "tanstack_root_error_component" });
-  }, [error]);
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
@@ -80,16 +76,13 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "viewport", content: "width=device-width, initial-scale=1" },
       { title: "triage" },
       { name: "description", content: "Swift Reply is an AI-powered email assistant for supply chain and operations teams." },
-      { name: "author", content: "Lovable" },
+      { name: "author", content: "Triage Team" },
       { property: "og:title", content: "triage" },
       { property: "og:description", content: "Swift Reply is an AI-powered email assistant for supply chain and operations teams." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
-      { name: "twitter:site", content: "@Lovable" },
       { name: "twitter:title", content: "triage" },
       { name: "twitter:description", content: "Swift Reply is an AI-powered email assistant for supply chain and operations teams." },
-      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/f28312c7-266a-43f7-abd9-773f2ab31bb7/id-preview-72c8473f--ee01b7f7-03a0-4f7e-b5c9-3d0f0590642c.lovable.app-1782190367246.png" },
-      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/f28312c7-266a-43f7-abd9-773f2ab31bb7/id-preview-72c8473f--ee01b7f7-03a0-4f7e-b5c9-3d0f0590642c.lovable.app-1782190367246.png" },
     ],
     links: [
       {

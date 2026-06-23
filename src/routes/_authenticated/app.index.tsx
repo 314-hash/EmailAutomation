@@ -1,10 +1,11 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { listEmails, seedDemoEmails, processPending } from "@/lib/emails.functions";
-import { Loader2, Sparkles, Mail, Filter } from "lucide-react";
+import { Loader2, Sparkles, Mail, Filter, Upload } from "lucide-react";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/_authenticated/app/")({
   component: InboxPage,
@@ -35,6 +36,45 @@ function InboxPage() {
   const navigate = useNavigate();
   const qc = useQueryClient();
   const [filter, setFilter] = useState<UrgencyFilter>("all");
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const { data: { user }, error: userErr } = await supabase.auth.getUser();
+      if (userErr || !user) {
+        toast.error("You must be logged in to upload files.");
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        const text = e.target?.result as string;
+        
+        const { error } = await supabase.from("emails").insert({
+          user_id: user.id,
+          from_addr: "uploaded-file@local",
+          from_name: `Uploaded File (${file.name})`,
+          subject: `Document: ${file.name.replace(/\.[^/.]+$/, "")}`,
+          body: text,
+          status: "pending",
+        });
+
+        if (error) {
+          toast.error(`Upload failed: ${error.message}`);
+        } else {
+          toast.success(`Successfully uploaded "${file.name}" as pending triage!`);
+          if (fileInputRef.current) fileInputRef.current.value = "";
+          qc.invalidateQueries({ queryKey: ["emails"] });
+        }
+      };
+      reader.readAsText(file);
+    } catch (err: any) {
+      toast.error(`Error reading file: ${err.message}`);
+    }
+  };
 
   const list = useServerFn(listEmails);
   const seed = useServerFn(seedDemoEmails);
@@ -89,6 +129,20 @@ function InboxPage() {
           <p className="text-xs text-muted-foreground">{emails.length} emails · {pendingCount} unprocessed</p>
         </div>
         <div className="flex items-center gap-2">
+          <input
+            type="file"
+            ref={fileInputRef}
+            onChange={handleFileUpload}
+            accept=".txt,.csv,.eml,.json,.md"
+            className="hidden"
+          />
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            className="inline-flex items-center gap-1.5 rounded-md border border-border bg-card px-3 py-1.5 text-xs font-medium text-foreground hover:bg-accent transition-colors"
+          >
+            <Upload className="h-3.5 w-3.5" />
+            Upload File
+          </button>
           <div className="flex items-center gap-1 rounded-md border border-border bg-card p-0.5 text-xs">
             <Filter className="ml-1.5 h-3 w-3 text-muted-foreground" />
             {(["all", "high", "medium", "low", "pending"] as UrgencyFilter[]).map((f) => (
