@@ -3,8 +3,19 @@ import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { getEmail, processEmail, markReplied, archiveEmail } from "@/lib/emails.functions";
-import { ArrowLeft, Loader2, Sparkles, Send, Archive } from "lucide-react";
+import { ArrowLeft, Loader2, Sparkles, Send, Archive, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 export const Route = createFileRoute("/_authenticated/app/email/$id")({
   component: EmailDetail,
@@ -37,6 +48,7 @@ function EmailDetail() {
 
   const [tone, setTone] = useState<"formal" | "direct" | "friendly">("formal");
   const [reply, setReply] = useState("");
+  const [confirmOpen, setConfirmOpen] = useState(false);
 
   const q = useQuery({
     queryKey: ["email", id],
@@ -60,7 +72,8 @@ function EmailDetail() {
   const sendMut = useMutation({
     mutationFn: () => send({ data: { id, reply } }),
     onSuccess: () => {
-      toast.success("Reply marked sent");
+      toast.success("Reply sent", { description: `Delivered to ${e?.from_addr ?? "recipient"}` });
+      setConfirmOpen(false);
       qc.invalidateQueries({ queryKey: ["email", id] });
       qc.invalidateQueries({ queryKey: ["emails"] });
       qc.invalidateQueries({ queryKey: ["analytics"] });
@@ -208,17 +221,66 @@ function EmailDetail() {
                   className="mt-2 h-48 w-full resize-none rounded-md border border-input bg-background p-3 text-sm leading-relaxed outline-none focus:ring-2 focus:ring-ring"
                 />
                 <div className="mt-2 flex items-center justify-end gap-2">
-                  <button
-                    onClick={() => sendMut.mutate()}
-                    disabled={sendMut.isPending || !reply.trim()}
-                    className="inline-flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:opacity-90 disabled:opacity-50"
-                  >
-                    {sendMut.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
-                    Mark as sent
-                  </button>
+                  {e.status === "replied" ? (
+                    <span className="inline-flex items-center gap-1.5 rounded-md border border-border bg-card px-3 py-1.5 text-xs text-muted-foreground">
+                      <CheckCircle2 className="h-3.5 w-3.5 text-primary" /> Sent
+                    </span>
+                  ) : (
+                    <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+                      <AlertDialogTrigger asChild>
+                        <button
+                          disabled={sendMut.isPending || !reply.trim()}
+                          className="inline-flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:opacity-90 disabled:opacity-50"
+                        >
+                          {sendMut.isPending ? (
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          ) : (
+                            <Send className="h-3.5 w-3.5" />
+                          )}
+                          Approve & Send
+                        </button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Send reply to {e.from_name ?? e.from_addr}?</AlertDialogTitle>
+                          <AlertDialogDescription asChild>
+                            <div className="space-y-2 text-xs">
+                              <div className="flex flex-col gap-0.5">
+                                <span><span className="text-muted-foreground">To:</span> {e.from_addr}</span>
+                                <span><span className="text-muted-foreground">Subject:</span> Re: {e.subject}</span>
+                              </div>
+                              <div className="max-h-48 overflow-y-auto whitespace-pre-wrap rounded-md border border-border bg-card p-3 text-foreground/90">
+                                {reply}
+                              </div>
+                            </div>
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel disabled={sendMut.isPending}>Cancel</AlertDialogCancel>
+                          <AlertDialogAction
+                            onClick={(ev) => {
+                              ev.preventDefault();
+                              sendMut.mutate();
+                            }}
+                            disabled={sendMut.isPending}
+                          >
+                            {sendMut.isPending ? (
+                              <>
+                                <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> Sending…
+                              </>
+                            ) : (
+                              <>
+                                <Send className="mr-1.5 h-3.5 w-3.5" /> Send now
+                              </>
+                            )}
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  )}
                 </div>
                 <p className="mt-2 text-[10px] text-muted-foreground">
-                  In MVP mode, replies are saved as drafts. Connect Outlook to send through your mailbox.
+                  MVP: approved replies are logged as sent. Connect Outlook to dispatch through your mailbox.
                 </p>
               </div>
             </>
