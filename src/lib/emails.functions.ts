@@ -64,7 +64,11 @@ const AiSchema = z.object({
 export const processEmail = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) =>
-    z.object({ id: z.string().uuid(), tone: z.enum(["formal", "direct", "friendly"]).optional() }).parse(d),
+    z.object({
+      id: z.string().uuid(),
+      tone: z.enum(["formal", "direct", "friendly"]).optional(),
+      prompt: z.string().max(1000).optional(),
+    }).parse(d),
   )
   .handler(async ({ context, data }) => {
     const apiKey = process.env.LOVABLE_API_KEY;
@@ -79,6 +83,7 @@ export const processEmail = createServerFn({ method: "POST" })
     if (!email) throw new Error("Email not found");
 
     const tone = data.tone ?? "formal";
+    const userPrompt = data.prompt?.trim();
     const { generateText } = await import("ai");
     const { createLovableAiGatewayProvider } = await import("./ai-gateway.server");
     const gateway = createLovableAiGatewayProvider(apiKey);
@@ -92,7 +97,11 @@ export const processEmail = createServerFn({ method: "POST" })
   "suggested_reply": "professional reply, ${tone} tone, ready to send",
   "next_action": "one of: reply, escalate, follow-up, schedule, archive — with a short reason"
 }
-Only include keys in key_details that are actually present. Never invent data. No prose outside JSON.`;
+Only include keys in key_details that are actually present. Never invent data. No prose outside JSON.${
+      userPrompt
+        ? `\n\nUSER INSTRUCTION FOR THE REPLY DRAFT (highest priority — rewrite suggested_reply to follow it exactly): "${userPrompt}"`
+        : ""
+    }`;
 
     const prompt = `From: ${email.from_name ?? ""} <${email.from_addr}>
 Subject: ${email.subject}
