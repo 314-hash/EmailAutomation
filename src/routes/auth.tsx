@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Mail, ArrowLeft } from "lucide-react";
 import { Link } from "@tanstack/react-router";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/auth")({
   head: () => ({
@@ -32,12 +33,19 @@ function AuthPage() {
     setErr(null);
     try {
       if (mode === "signup") {
-        const { error } = await supabase.auth.signUp({
+        const { data, error } = await supabase.auth.signUp({
           email,
           password,
           options: { emailRedirectTo: window.location.origin, data: { display_name: name } },
         });
         if (error) throw error;
+        if (data.user && !data.session) {
+          toast.success("Account created! Please check your email for a confirmation link.");
+          setMode("signin");
+          setPassword("");
+          setLoading(false);
+          return;
+        }
       } else {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;

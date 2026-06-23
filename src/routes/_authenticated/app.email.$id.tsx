@@ -261,9 +261,9 @@ function EmailDetail() {
         </div>
       </header>
 
-      <div className="grid flex-1 grid-cols-12 overflow-hidden">
+      <div className="flex flex-1 flex-col overflow-y-auto md:grid md:grid-cols-12 md:overflow-hidden">
         {/* Email body */}
-        <section className="col-span-7 overflow-y-auto border-r border-border px-8 py-6">
+        <section className="w-full px-6 py-6 border-b border-border md:col-span-7 md:border-b-0 md:border-r md:overflow-y-auto md:px-8">
           <h1 className="text-xl font-semibold tracking-tight">{e.subject}</h1>
           <div className="mt-3 flex items-center gap-3 text-xs text-muted-foreground">
             <span className="font-medium text-foreground">{e.from_name ?? e.from_addr}</span>
@@ -274,7 +274,7 @@ function EmailDetail() {
         </section>
 
         {/* AI panel */}
-        <aside className="col-span-5 overflow-y-auto bg-card/40 px-6 py-6">
+        <aside className="w-full px-6 py-6 bg-card/40 md:col-span-5 md:overflow-y-auto md:px-6">
           {!e.summary ? (
             <div className="rounded-lg border border-dashed border-border bg-card p-6 text-center">
               <Sparkles className="mx-auto h-5 w-5 text-primary" />
