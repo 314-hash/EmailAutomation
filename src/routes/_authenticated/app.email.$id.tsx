@@ -3,7 +3,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { getEmail, processEmail, markReplied, archiveEmail } from "@/lib/emails.functions";
-import { ArrowLeft, Loader2, Sparkles, Send, Archive, CheckCircle2 } from "lucide-react";
+import { ArrowLeft, Loader2, Sparkles, Send, Archive, CheckCircle2, Check, Trash2, RefreshCw, SlidersHorizontal, Wand2 } from "lucide-react";
 import { toast } from "sonner";
 import {
   AlertDialog,
@@ -49,6 +49,10 @@ function EmailDetail() {
   const [tone, setTone] = useState<"formal" | "direct" | "friendly">("formal");
   const [reply, setReply] = useState("");
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [userPrompt, setUserPrompt] = useState("");
+  const [lastPrompt, setLastPrompt] = useState<string | null>(null);
+  const [draftState, setDraftState] = useState<"draft" | "kept" | "discarded">("draft");
+  const [showAdjust, setShowAdjust] = useState(false);
 
   const q = useQuery({
     queryKey: ["email", id],
@@ -60,9 +64,11 @@ function EmailDetail() {
   }, [q.data?.suggested_reply]);
 
   const processMut = useMutation({
-    mutationFn: () => proc({ data: { id, tone } }),
-    onSuccess: () => {
-      toast.success("Analyzed");
+    mutationFn: (opts?: { prompt?: string }) => proc({ data: { id, tone, prompt: opts?.prompt } }),
+    onSuccess: (_r, vars) => {
+      toast.success(vars?.prompt ? "Draft regenerated" : "Analyzed");
+      setLastPrompt(vars?.prompt ?? null);
+      setDraftState("draft");
       qc.invalidateQueries({ queryKey: ["email", id] });
       qc.invalidateQueries({ queryKey: ["emails"] });
     },
@@ -100,6 +106,8 @@ function EmailDetail() {
   if (!e) {
     return <div className="p-8 text-sm text-muted-foreground">Email not found.</div>;
   }
+
+  const isReplied = e.status === "replied";
 
   return (
     <div className="flex h-screen flex-col">
@@ -198,34 +206,155 @@ function EmailDetail() {
               )}
 
               <div className="mt-6">
-                <div className="flex items-center justify-between">
-                  <div className="label-eyebrow">Suggested reply</div>
-                  <div className="flex items-center gap-0.5 rounded border border-border bg-card p-0.5 text-[10px]">
-                    {(["formal", "direct", "friendly"] as const).map((t) => (
-                      <button
-                        key={t}
-                        onClick={() => {
-                          setTone(t);
-                          processMut.mutate();
-                        }}
-                        className={`rounded px-1.5 py-0.5 capitalize ${tone === t ? "bg-accent text-accent-foreground" : "text-muted-foreground"}`}
-                      >
-                        {t}
-                      </button>
-                    ))}
+                <div className="label-eyebrow mb-2">Drafted reply</div>
+
+                {draftState === "discarded" ? (
+                  <div className="rounded-lg border border-dashed border-border bg-card p-6 text-center">
+                    <Trash2 className="mx-auto h-5 w-5 text-muted-foreground" />
+                    <p className="mt-3 text-sm font-medium">Draft discarded</p>
+                    <p className="mt-1 text-xs text-muted-foreground">Generate a new one with your own instruction.</p>
+                    <button
+                      onClick={() => { setDraftState("draft"); setUserPrompt(""); }}
+                      className="mt-4 inline-flex items-center gap-1.5 rounded-md border border-border bg-card px-3 py-1.5 text-xs hover:bg-accent"
+                    >
+                      <Wand2 className="h-3.5 w-3.5" /> Start over
+                    </button>
                   </div>
-                </div>
-                <textarea
-                  value={reply}
-                  onChange={(ev) => setReply(ev.target.value)}
-                  className="mt-2 h-48 w-full resize-none rounded-md border border-input bg-background p-3 text-sm leading-relaxed outline-none focus:ring-2 focus:ring-ring"
-                />
-                <div className="mt-2 flex items-center justify-end gap-2">
-                  {e.status === "replied" ? (
-                    <span className="inline-flex items-center gap-1.5 rounded-md border border-border bg-card px-3 py-1.5 text-xs text-muted-foreground">
-                      <CheckCircle2 className="h-3.5 w-3.5 text-primary" /> Sent
-                    </span>
-                  ) : (
+                ) : (
+                  <div className="overflow-hidden rounded-lg border border-border bg-card shadow-sm">
+                    {/* Prompt header pill */}
+                    {lastPrompt && (
+                      <div className="flex items-center justify-between border-b border-border bg-primary/5 px-4 py-2.5">
+                        <div className="flex items-center gap-2 text-xs">
+                          <Wand2 className="h-3.5 w-3.5 text-primary" />
+                          <span className="font-medium text-foreground">{lastPrompt}</span>
+                        </div>
+                        <span className="text-[10px] uppercase tracking-wide text-muted-foreground">AI-generated</span>
+                      </div>
+                    )}
+
+                    {/* Draft body */}
+                    {processMut.isPending ? (
+                      <div className="flex h-48 items-center justify-center px-4 text-xs text-muted-foreground">
+                        <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" /> Drafting reply…
+                      </div>
+                    ) : draftState === "kept" ? (
+                      <pre className="max-h-72 overflow-y-auto whitespace-pre-wrap px-4 py-4 font-sans text-sm leading-relaxed text-foreground/90">
+                        {reply}
+                      </pre>
+                    ) : (
+                      <textarea
+                        value={reply}
+                        onChange={(ev) => setReply(ev.target.value)}
+                        className="block h-56 w-full resize-none bg-transparent px-4 py-4 text-sm leading-relaxed outline-none"
+                      />
+                    )}
+
+                    {/* Adjust panel (tone) */}
+                    {showAdjust && (
+                      <div className="border-t border-border bg-muted/30 px-4 py-3">
+                        <div className="mb-2 text-[10px] uppercase tracking-wide text-muted-foreground">Tone</div>
+                        <div className="flex items-center gap-1 rounded border border-border bg-card p-0.5 text-[11px]">
+                          {(["formal", "direct", "friendly"] as const).map((t) => (
+                            <button
+                              key={t}
+                              onClick={() => {
+                                setTone(t);
+                                processMut.mutate({ prompt: userPrompt.trim() || lastPrompt || undefined });
+                              }}
+                              className={`flex-1 rounded px-2 py-1 capitalize ${tone === t ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:text-foreground"}`}
+                            >
+                              {t}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* "Anything you'd like to change?" input */}
+                    {draftState === "draft" && !processMut.isPending && (
+                      <div className="border-t border-border px-4 py-3">
+                        <form
+                          onSubmit={(ev) => {
+                            ev.preventDefault();
+                            const p = userPrompt.trim();
+                            if (!p) return;
+                            processMut.mutate({ prompt: p });
+                          }}
+                          className="flex items-center gap-2"
+                        >
+                          <input
+                            value={userPrompt}
+                            onChange={(ev) => setUserPrompt(ev.target.value)}
+                            placeholder="Anything you'd like to change?"
+                            className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+                          />
+                          {userPrompt.trim() && (
+                            <button
+                              type="submit"
+                              className="rounded-md bg-primary px-2.5 py-1 text-[11px] font-medium text-primary-foreground hover:opacity-90"
+                            >
+                              Apply
+                            </button>
+                          )}
+                        </form>
+                      </div>
+                    )}
+
+                    {/* Keep / Discard / Regenerate / Adjust */}
+                    <div className="flex items-center gap-1 border-t border-border bg-muted/20 px-2 py-2">
+                      {draftState === "kept" || isReplied ? (
+                        <>
+                          <span className="inline-flex items-center gap-1.5 rounded-md bg-success/15 px-2.5 py-1.5 text-[11px] font-medium text-success">
+                            <CheckCircle2 className="h-3.5 w-3.5" /> {isReplied ? "Sent" : "Kept"}
+                          </span>
+                          {!isReplied && (
+                            <button
+                              onClick={() => setDraftState("draft")}
+                              className="ml-auto rounded-md px-2.5 py-1.5 text-[11px] text-muted-foreground hover:bg-accent hover:text-foreground"
+                            >
+                              Edit again
+                            </button>
+                          )}
+                        </>
+                      ) : (
+                        <>
+                          <button
+                            onClick={() => { setDraftState("kept"); toast.success("Draft kept"); }}
+                            disabled={processMut.isPending || !reply.trim()}
+                            className="inline-flex items-center gap-1.5 rounded-md bg-primary px-2.5 py-1.5 text-[11px] font-medium text-primary-foreground hover:opacity-90 disabled:opacity-50"
+                          >
+                            <Check className="h-3.5 w-3.5" /> Keep
+                          </button>
+                          <button
+                            onClick={() => setDraftState("discarded")}
+                            className="inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-[11px] text-muted-foreground hover:bg-accent hover:text-foreground"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" /> Discard
+                          </button>
+                          <button
+                            onClick={() => processMut.mutate({ prompt: lastPrompt ?? userPrompt.trim() || undefined })}
+                            disabled={processMut.isPending}
+                            className="inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-[11px] text-muted-foreground hover:bg-accent hover:text-foreground disabled:opacity-50"
+                          >
+                            <RefreshCw className={`h-3.5 w-3.5 ${processMut.isPending ? "animate-spin" : ""}`} /> Regenerate
+                          </button>
+                          <button
+                            onClick={() => setShowAdjust((s) => !s)}
+                            className={`inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-[11px] hover:bg-accent hover:text-foreground ${showAdjust ? "bg-accent text-foreground" : "text-muted-foreground"}`}
+                          >
+                            <SlidersHorizontal className="h-3.5 w-3.5" /> Adjust
+                          </button>
+                          <span className="ml-auto text-[10px] text-muted-foreground">AI-generated content may be inaccurate</span>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Send action — only after Keep */}
+                {draftState === "kept" && !isReplied && (
+                  <div className="mt-3 flex items-center justify-end">
                     <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
                       <AlertDialogTrigger asChild>
                         <button
@@ -277,10 +406,10 @@ function EmailDetail() {
                         </AlertDialogFooter>
                       </AlertDialogContent>
                     </AlertDialog>
-                  )}
-                </div>
+                  </div>
+                )}
                 <p className="mt-2 text-[10px] text-muted-foreground">
-                  MVP: approved replies are logged as sent. Connect Outlook to dispatch through your mailbox.
+                  Proof of concept: approved replies are logged as sent. Outlook dispatch can be wired in later.
                 </p>
               </div>
             </>
