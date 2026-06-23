@@ -78,14 +78,18 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Lovable App" },
-      { name: "description", content: "Lovable Generated Project" },
+      { title: "triage" },
+      { name: "description", content: "Swift Reply is an AI-powered email assistant for supply chain and operations teams." },
       { name: "author", content: "Lovable" },
-      { property: "og:title", content: "Lovable App" },
-      { property: "og:description", content: "Lovable Generated Project" },
+      { property: "og:title", content: "triage" },
+      { property: "og:description", content: "Swift Reply is an AI-powered email assistant for supply chain and operations teams." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
       { name: "twitter:site", content: "@Lovable" },
+      { name: "twitter:title", content: "triage" },
+      { name: "twitter:description", content: "Swift Reply is an AI-powered email assistant for supply chain and operations teams." },
+      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/f28312c7-266a-43f7-abd9-773f2ab31bb7/id-preview-72c8473f--ee01b7f7-03a0-4f7e-b5c9-3d0f0590642c.lovable.app-1782190367246.png" },
+      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/f28312c7-266a-43f7-abd9-773f2ab31bb7/id-preview-72c8473f--ee01b7f7-03a0-4f7e-b5c9-3d0f0590642c.lovable.app-1782190367246.png" },
     ],
     links: [
       {
