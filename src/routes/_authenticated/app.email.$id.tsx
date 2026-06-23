@@ -145,7 +145,7 @@ function EmailDetail() {
               <p className="mt-3 text-sm font-medium">Not analyzed yet</p>
               <p className="mt-1 text-xs text-muted-foreground">Run AI analysis to extract details and draft a reply.</p>
               <button
-                onClick={() => processMut.mutate()}
+                onClick={() => processMut.mutate(undefined)}
                 disabled={processMut.isPending}
                 className="mt-4 inline-flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:opacity-90 disabled:opacity-50"
               >
@@ -158,7 +158,7 @@ function EmailDetail() {
               <div className="flex items-center justify-between">
                 <div className="label-eyebrow">AI Analysis</div>
                 <button
-                  onClick={() => processMut.mutate()}
+                  onClick={() => processMut.mutate(undefined)}
                   disabled={processMut.isPending}
                   className="text-xs text-muted-foreground hover:text-foreground"
                   title="Re-analyze"
@@ -333,7 +333,7 @@ function EmailDetail() {
                             <Trash2 className="h-3.5 w-3.5" /> Discard
                           </button>
                           <button
-                            onClick={() => processMut.mutate({ prompt: lastPrompt ?? userPrompt.trim() || undefined })}
+                            onClick={() => processMut.mutate({ prompt: lastPrompt ?? (userPrompt.trim() || undefined) })}
                             disabled={processMut.isPending}
                             className="inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-[11px] text-muted-foreground hover:bg-accent hover:text-foreground disabled:opacity-50"
                           >
